@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Blog</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>My Interactive Blog</h1>
+            <p class="tagline">Share your thoughts with the world</p>
+        </header>
+
+        <main class="main-content">
+            <section class="blog-form-section">
+                <h2>Create New Post</h2>
+                <form id="blogForm" class="blog-form">
+                    <div class="form-group">
+                        <label for="author">Your Name</label>
+                        <input type="text" id="author" required placeholder="Enter your name">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="title">Blog Title</label>
+                        <input type="text" id="title" required placeholder="Enter blog title">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="abstract">Abstract</label>
+                        <textarea id="abstract" required placeholder="Short summary of your post"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="content">Content</label>
+                        <textarea id="content" required placeholder="Write your blog content here"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="keywords">Keywords (comma separated)</label>
+                        <input type="text" id="keywords" placeholder="technology, web development, design">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="image">Featured Image</label>
+                        <input type="file" id="image" accept="image/*">
+                        <div class="image-preview" id="imagePreview"></div>
+                    </div>
+                    
+                    <button type="submit" class="publish-btn">
+                        <span>Publish Post</span>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+            </section>
+
+            <section class="blog-posts-section">
+                <h2>Recent Posts</h2>
+                <div id="blogPosts" class="blog-posts-grid">
+                    <!-- Blog posts will be dynamically inserted here -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
