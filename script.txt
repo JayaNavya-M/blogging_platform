@@ -1,0 +1,286 @@
+document.addEventListener('DOMContentLoaded', function () {
+    // DOM Elements
+    const blogForm = document.getElementById('blogForm');
+    const blogPostsContainer = document.getElementById('blogPosts');
+    const imageInput = document.getElementById('image');
+    const imagePreview = document.getElementById('imagePreview');
+
+    // Categories with colors
+    const categories = [
+        { name: 'Technology', color: '#4361ee' },
+        { name: 'Travel', color: '#3a0ca3' },
+        { name: 'Food', color: '#f72585' },
+        { name: 'Lifestyle', color: '#4cc9f0' },
+        { name: 'Business', color: '#4895ef' },
+        { name: 'Health', color: '#43aa8b' }
+    ];
+
+    initApp();
+
+    blogForm.addEventListener('submit', handleFormSubmit);
+    imageInput.addEventListener('change', handleImageUpload);
+
+    function initApp() {
+        loadBlogPosts();
+    }
+
+    function handleFormSubmit(e) {
+        e.preventDefault();
+
+        const author = document.getElementById('author').value.trim();
+        const title = document.getElementById('title').value.trim();
+        const abstract = document.getElementById('abstract').value.trim();
+        const content = document.getElementById('content').value.trim();
+        const keywords = document.getElementById('keywords').value
+            .split(',')
+            .map(k => k.trim())
+            .filter(k => k !== '');
+
+        if (!author || !title || !abstract || !content) {
+            alert('Please fill in all required fields');
+            return;
+        }
+
+        const newPost = {
+            id: Date.now().toString(),
+            author,
+            title,
+            abstract,
+            content,
+            keywords,
+            date: new Date().toLocaleString(),
+            likes: 0,
+            shares: 0,
+            comments: [],
+            category: categories[Math.floor(Math.random() * categories.length)]
+        };
+
+        if (imageInput.files && imageInput.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                newPost.image = e.target.result;
+                saveBlogPost(newPost);
+            };
+            reader.readAsDataURL(imageInput.files[0]);
+        } else {
+            saveBlogPost(newPost);
+        }
+    }
+
+    function handleImageUpload(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                imagePreview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function saveBlogPost(post) {
+        const existingPosts = JSON.parse(localStorage.getItem('blogPosts')) || [];
+        existingPosts.push(post);  // Appending new post to existing posts
+        localStorage.setItem('blogPosts', JSON.stringify(existingPosts));
+        blogForm.reset();
+        imagePreview.innerHTML = '';
+        loadBlogPosts();
+        alert('Blog post published successfully!');
+    }
+
+    function loadBlogPosts() {
+        const posts = JSON.parse(localStorage.getItem('blogPosts')) || [];
+        blogPostsContainer.innerHTML = '';
+        posts.forEach(post => {
+            const postElement = createBlogPostElement(post);
+            blogPostsContainer.appendChild(postElement);
+        });
+    }
+
+    function createBlogPostElement(post) {
+        const postElement = document.createElement('div');
+        postElement.className = 'blog-card';
+        postElement.dataset.id = post.id;
+
+        let html = `
+            ${post.image ? `<img src="${post.image}" class="blog-image" alt="${post.title}">` : ''}
+            <div class="blog-content">
+                <div class="blog-category" style="background-color: ${post.category.color}">
+                    ${post.category.name}
+                </div>
+                <h3 class="blog-title">${post.title}</h3>
+                <p class="blog-author">By ${post.author}</p>
+                <p class="blog-date">${post.date}</p>
+                <p class="blog-abstract">${post.abstract}</p>
+                <div class="blog-full-content" style="display: none;">${post.content}</div>
+        `;
+
+        if (post.keywords && post.keywords.length > 0) {
+            html += `<div class="blog-keywords">`;
+            post.keywords.forEach(keyword => {
+                html += `<span class="keyword">${keyword}</span>`;
+            });
+            html += `</div>`;
+        }
+
+        html += `
+                <a class="read-more">Read More</a>
+                <div class="blog-actions">
+                    <button class="like-btn" data-id="${post.id}">
+                        <i class="fas fa-heart"></i>
+                        <span class="like-count">${post.likes}</span>
+                    </button>
+                    <button class="share-btn" data-id="${post.id}">
+                        <i class="fas fa-share-alt"></i>
+                        <span class="share-count">${post.shares}</span>
+                    </button>
+                    <button class="comment-btn" data-id="${post.id}">
+                        <i class="fas fa-comment"></i>
+                        <span>Comment</span>
+                    </button>
+                </div>
+                <div class="comment-section" id="comments-${post.id}" style="display: none;">
+                    <div class="comments-list" id="comments-list-${post.id}">
+                        ${post.comments.map(comment => `
+                            <div class="comment">
+                                <span class="comment-author">${comment.author}:</span>
+                                <span class="comment-text">${comment.text}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <form class="comment-form" data-id="${post.id}">
+                        <input type="text" class="comment-input" placeholder="Add a comment..." required>
+                        <button type="submit" class="comment-submit">Post</button>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        postElement.innerHTML = html;
+
+        // Event listeners
+        postElement.querySelector('.like-btn').addEventListener('click', () => handleLike(post.id));
+        postElement.querySelector('.share-btn').addEventListener('click', () => handleShare(post.id));
+        postElement.querySelector('.comment-btn').addEventListener('click', () => toggleCommentSection(post.id));
+        postElement.querySelector('.read-more').addEventListener('click', () => toggleReadMore(postElement));
+        postElement.querySelector('.comment-form').addEventListener('submit', (e) => handleCommentSubmit(e, post.id));
+
+        // Delete button
+        const deleteBtn = document.createElement("button");
+        deleteBtn.classList.add("delete-btn");
+        deleteBtn.innerHTML = `<i class="fas fa-trash"></i> Delete`;
+
+        deleteBtn.addEventListener("click", () => {
+            if (confirm("Are you sure you want to delete this post?")) {
+                let posts = JSON.parse(localStorage.getItem("blogPosts")) || [];
+                posts = posts.filter(p => p.id !== post.id);
+                localStorage.setItem("blogPosts", JSON.stringify(posts));
+                postElement.remove();
+            }
+        });
+
+        postElement.querySelector(".blog-actions").appendChild(deleteBtn);
+
+        return postElement;
+    }
+
+    function handleLike(postId) {
+        const posts = JSON.parse(localStorage.getItem('blogPosts')) || [];
+        const postIndex = posts.findIndex(post => post.id === postId);
+
+        if (postIndex !== -1) {
+            const isLiked = posts[postIndex].isLiked || false;
+            posts[postIndex].likes = isLiked ? posts[postIndex].likes - 1 : posts[postIndex].likes + 1;
+            posts[postIndex].isLiked = !isLiked;
+
+            localStorage.setItem('blogPosts', JSON.stringify(posts));
+
+            const likeBtn = document.querySelector(`.like-btn[data-id="${postId}"]`);
+            const likeCount = likeBtn.querySelector('.like-count');
+            likeCount.textContent = posts[postIndex].likes;
+
+            likeBtn.classList.toggle('liked', posts[postIndex].isLiked);
+        }
+    }
+
+    function handleShare(postId) {
+        const posts = JSON.parse(localStorage.getItem('blogPosts')) || [];
+        const postIndex = posts.findIndex(post => post.id === postId);
+
+        if (postIndex !== -1) {
+            posts[postIndex].shares += 1;
+            localStorage.setItem('blogPosts', JSON.stringify(posts));
+
+            const shareBtn = document.querySelector(`.share-btn[data-id="${postId}"]`);
+            const shareCount = shareBtn.querySelector('.share-count');
+            shareCount.textContent = posts[postIndex].shares;
+
+            alert(`Share "${posts[postIndex].title}" on social media!`);
+        }
+    }
+
+    function toggleCommentSection(postId) {
+        const commentSection = document.getElementById(`comments-${postId}`);
+        const isVisible = commentSection.style.display === 'block';
+
+        document.querySelectorAll('.comment-section').forEach(section => {
+            section.style.display = 'none';
+        });
+
+        commentSection.style.display = isVisible ? 'none' : 'block';
+    }
+
+    function toggleReadMore(postElement) {
+        const fullContent = postElement.querySelector('.blog-full-content');
+        const readMoreLink = postElement.querySelector('.read-more');
+
+        if (fullContent.style.display === 'none') {
+            fullContent.style.display = 'block';
+            readMoreLink.textContent = 'Read Less';
+        } else {
+            fullContent.style.display = 'none';
+            readMoreLink.textContent = 'Read More';
+        }
+    }
+
+    function handleCommentSubmit(e, postId) {
+        e.preventDefault();
+
+        const commentInput = e.target.querySelector('.comment-input');
+        const commentText = commentInput.value.trim();
+
+        if (!commentText) return;
+
+        const author = prompt('Please enter your name:') || 'Anonymous';
+
+        const newComment = {
+            author,
+            text: commentText,
+            date: new Date().toLocaleString()
+        };
+
+        const posts = JSON.parse(localStorage.getItem('blogPosts')) || [];
+        const postIndex = posts.findIndex(post => post.id === postId);
+
+        if (postIndex !== -1) {
+            posts[postIndex].comments.push(newComment);
+            localStorage.setItem('blogPosts', JSON.stringify(posts));
+
+            const commentsList = document.getElementById(`comments-list-${postId}`);
+            const commentElement = document.createElement('div');
+            commentElement.className = 'comment';
+            commentElement.innerHTML = `
+                <span class="comment-author">${newComment.author}:</span>
+                <span class="comment-text">${newComment.text}</span>
+            `;
+            commentsList.appendChild(commentElement);
+
+            commentInput.value = '';
+        }
+    }
+});
+
+// Set background image
+document.body.style.backgroundImage = "url('fsd1.jpg')";
+document.body.style.backgroundSize = "cover";
+document.body.style.backgroundPosition = "center";
